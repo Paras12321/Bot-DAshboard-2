@@ -41,8 +41,8 @@ function showSection(section) {
     if (link) link.classList.add('active');
 
     // Show/hide sections
-    const allSections = ['addbot','sendmsg','scheduler','autoreply','welcome','logs','botlist','profile'];
-    const dashSections = ['addbot','sendmsg','scheduler','autoreply','welcome','logs'];
+    const allSections = ['addbot','sendmsg','autoreply','welcome','logs','botlist','profile'];
+    const dashSections = ['addbot','sendmsg','autoreply','welcome','logs'];
 
     if (section === 'dashboard') {
         // Show main dashboard panels
@@ -122,7 +122,7 @@ function renderBotTable(bots) {
 
 function populateBotSelects(bots) {
     const active = bots.filter(b => b.is_active);
-    ['msgBot','arBot','schedBot'].forEach(id => {
+    ['msgBot','arBot'].forEach(id => {
         const el = document.getElementById(id); if(!el) return;
         el.innerHTML = '<option value="">Select bot</option>' + active.map(b => `<option value="${b.id}">${b.name} (${b.platform})</option>`).join('');
     });
@@ -191,9 +191,7 @@ async function updateStats() {
     const stats = await apiGet('/tasks/stats');
     if (stats) {
         animateNum('statMessages', stats.done);
-        animateNum('statScheduled', stats.pending);
         setText('statMsgSub', `+${stats.done} total`);
-        setText('statSchedSub', `${stats.pending} pending`);
         setText('sysPending', stats.pending);
     }
     const totalBots = botsCache.length;
@@ -233,16 +231,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = { bot_id: +val('msgBot'), target_id: val('msgTarget'), message: val('msgContent') };
         if (!data.bot_id||!data.target_id||!data.message) { showToast('Fill all fields','error'); return; }
         const r = await apiPost('/tasks/send-message', data);
-        if (r) { showToast('Message queued!','success'); e.target.reset(); loadLogs(); updateStats(); }
-    });
-
-    // Schedule Message
-    document.getElementById('scheduleForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = { bot_id: +val('schedBot'), target_id: val('schedTarget'), message: val('schedMessage'), action: 'send_message' };
-        if (!data.bot_id||!data.target_id||!data.message) { showToast('Fill all fields','error'); return; }
-        const r = await apiPost('/tasks/', data);
-        if (r) { showToast('Message scheduled!','success'); e.target.reset(); updateStats(); }
+        if (r) { 
+            showToast('Message queued!','success'); 
+            
+            const shareOtherApp = confirm("Do you want to share this message on the other app too?");
+            if (shareOtherApp) {
+                const currentBot = botsCache.find(b => b.id === data.bot_id);
+                const otherPlatform = currentBot.platform === 'discord' ? 'telegram' : 'discord';
+                const otherBot = botsCache.find(b => b.platform === otherPlatform && b.is_active);
+                
+                if (otherBot) {
+                    const otherTarget = prompt(`Enter Target ID for ${otherBot.name} (${otherPlatform}):`, data.target_id);
+                    if (otherTarget) {
+                        const r2 = await apiPost('/tasks/send-message', { bot_id: otherBot.id, target_id: otherTarget, message: data.message });
+                        if (r2) {
+                            showToast(`Message also queued for ${otherPlatform}!`, 'success');
+                        }
+                    }
+                } else {
+                    showToast(`No active bot found for ${otherPlatform}.`, 'error');
+                }
+            }
+            
+            e.target.reset(); 
+            loadLogs(); 
+            updateStats(); 
+        }
     });
 
     // Auto Reply
