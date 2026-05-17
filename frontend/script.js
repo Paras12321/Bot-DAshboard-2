@@ -233,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const r = await apiPost('/tasks/send-message', data);
         if (r) { 
             showToast('Message queued!','success'); 
+<<<<<<< HEAD
             e.target.reset(); 
             loadLogs(); 
             updateStats(); 
@@ -294,6 +295,31 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.reset();
             loadLogs();
             updateStats();
+=======
+            
+            const shareOtherApp = confirm("Do you want to share this message on the other app too?");
+            if (shareOtherApp) {
+                const currentBot = botsCache.find(b => b.id === data.bot_id);
+                const otherPlatform = currentBot.platform === 'discord' ? 'telegram' : 'discord';
+                const otherBot = botsCache.find(b => b.platform === otherPlatform && b.is_active);
+                
+                if (otherBot) {
+                    const otherTarget = prompt(`Enter Target ID for ${otherBot.name} (${otherPlatform}):`, data.target_id);
+                    if (otherTarget) {
+                        const r2 = await apiPost('/tasks/send-message', { bot_id: otherBot.id, target_id: otherTarget, message: data.message });
+                        if (r2) {
+                            showToast(`Message also queued for ${otherPlatform}!`, 'success');
+                        }
+                    }
+                } else {
+                    showToast(`No active bot found for ${otherPlatform}.`, 'error');
+                }
+            }
+            
+            e.target.reset(); 
+            loadLogs(); 
+            updateStats(); 
+>>>>>>> fbe3bdf7f835457d1b4d71199040138fff24d86d
         }
     });
 

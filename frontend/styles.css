@@ -75,6 +75,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-body);color:var(--text);
 .red-bg{background:rgba(231,76,60,.15);}
 .green-bg{background:rgba(46,204,113,.15);}
 .yellow-bg{background:rgba(241,196,0,.15);}
+.purple-bg{background:rgba(139,92,246,.15);}
 .panel-body{padding:20px;}
 
 /* ===== FORMS ===== */
@@ -96,8 +97,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
 .btn-primary:hover{background:#3a6af0;transform:translateY(-1px);}
 .btn-send{background:var(--teal);color:#fff;float:right;}
 .btn-send:hover{background:#00a884;}
-.btn-schedule{background:linear-gradient(135deg,var(--orange),#e67e22);color:#fff;float:right;}
-.btn-schedule:hover{transform:translateY(-1px);}
+
 .btn-addrule{background:var(--red);color:#fff;float:right;}
 .btn-addrule:hover{background:#c0392b;}
 .btn-welcome{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;float:right;}
