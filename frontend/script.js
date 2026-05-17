@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const r = await apiPost('/tasks/send-message', data);
         if (r) { 
             showToast('Message queued!','success'); 
-<<<<<<< HEAD
+// <<<<<<< HEAD
             e.target.reset(); 
             loadLogs(); 
             updateStats(); 
@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.reset();
             loadLogs();
             updateStats();
-=======
+// =======
             
             const shareOtherApp = confirm("Do you want to share this message on the other app too?");
             if (shareOtherApp) {
@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.reset(); 
             loadLogs(); 
             updateStats(); 
->>>>>>> fbe3bdf7f835457d1b4d71199040138fff24d86d
+// >>>>>>> fbe3bdf7f835457d1b4d71199040138fff24d86d
         }
     });
 
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Welcome Message
     document.getElementById('welcomeForm')?.addEventListener('submit', async e => {
         e.preventDefault();
-        const data = { bot_id: +val('welBot'), channel_id: 'general', message_template: val('welMessage') };
+        const data = { bot_id: +val('welBot'), channel_id: val('welChannel'), message_template: val('welMessage') };
         if (!data.bot_id||!data.message_template) { showToast('Fill all fields','error'); return; }
         const r = await apiPost('/welcome/', data);
         if (r) { showToast('Welcome message saved!','success'); e.target.reset(); }

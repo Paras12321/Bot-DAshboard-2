@@ -49,7 +49,10 @@ async def process_task(task, semaphore: asyncio.Semaphore) -> None:
       3. Write an audit log entry.
     """
     async with semaphore:
+        
+        
         task_id = task["id"]
+        db_access.mark_task_done(task_id, status="processing")  
         bot_id = task["bot_id"]
         platform = task["platform"]
         token = task["token"]
@@ -168,4 +171,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        sys.exit(0)
+        sys.exit(0)

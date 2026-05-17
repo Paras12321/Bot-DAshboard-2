@@ -64,22 +64,22 @@ def create_log(task_id=None, bot_id=None, level="info", message="", details=None
         conn.commit()
 
 
-def get_auto_replies(bot_id):
+def get_auto_replies():
     """Get all active auto-reply rules for a specific bot."""
     with get_connection() as conn:
         return conn.execute("""
-            SELECT * FROM auto_replies          -- fixed: was 'auto_repliesz'
-            WHERE bot_id = ? AND is_active = 1
-        """, (bot_id,)).fetchall()
+    SELECT * FROM auto_replies
+    WHERE is_active = 1
+    """).fetchall()
 
 
-def get_welcome_messages(bot_id):
+def get_welcome_messages():
     """Get all active welcome messages for a specific bot."""
     with get_connection() as conn:
         return conn.execute("""
             SELECT * FROM welcome_messages
-            WHERE bot_id = ? AND is_active = 1
-        """, (bot_id,)).fetchall()
+            WHERE is_active = 1
+        """).fetchall()
 
 
 def get_active_bots():
