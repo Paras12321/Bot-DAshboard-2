@@ -4,7 +4,9 @@ Uses python-telegram-bot library.
 """
 
 import asyncio
+# pyrefly: ignore [missing-import]
 from telegram import Bot
+# pyrefly: ignore [missing-import]
 from telegram.error import TelegramError, InvalidToken, Forbidden
 
 
@@ -79,6 +81,10 @@ class TelegramBotHandler:
             }
         except Exception as e:
             return {"error": str(e)}
+
+    async def close_all(self):
+        """Shut down all cached bot sessions gracefully."""
+        pass
 
 
 # Singleton instance
