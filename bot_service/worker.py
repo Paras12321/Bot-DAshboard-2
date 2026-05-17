@@ -11,6 +11,10 @@ import sys
 import os
 import time
 
+# Set stdout to UTF-8 to support emoji printing on Windows
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 

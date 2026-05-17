@@ -41,8 +41,8 @@ function showSection(section) {
     if (link) link.classList.add('active');
 
     // Show/hide sections
-    const allSections = ['addbot','sendmsg','scheduler','autoreply','welcome','logs','botlist','profile'];
-    const dashSections = ['addbot','sendmsg','scheduler','autoreply','welcome','logs'];
+    const allSections = ['addbot','sendmsg','autoreply','welcome','logs','botlist','profile'];
+    const dashSections = ['addbot','sendmsg','autoreply','welcome','logs'];
 
     if (section === 'dashboard') {
         // Show main dashboard panels
@@ -122,7 +122,7 @@ function renderBotTable(bots) {
 
 function populateBotSelects(bots) {
     const active = bots.filter(b => b.is_active);
-    ['msgBot','arBot','schedBot'].forEach(id => {
+    ['msgBot','arBot'].forEach(id => {
         const el = document.getElementById(id); if(!el) return;
         el.innerHTML = '<option value="">Select bot</option>' + active.map(b => `<option value="${b.id}">${b.name} (${b.platform})</option>`).join('');
     });
@@ -191,9 +191,7 @@ async function updateStats() {
     const stats = await apiGet('/tasks/stats');
     if (stats) {
         animateNum('statMessages', stats.done);
-        animateNum('statScheduled', stats.pending);
         setText('statMsgSub', `+${stats.done} total`);
-        setText('statSchedSub', `${stats.pending} pending`);
         setText('sysPending', stats.pending);
     }
     const totalBots = botsCache.length;
@@ -233,16 +231,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = { bot_id: +val('msgBot'), target_id: val('msgTarget'), message: val('msgContent') };
         if (!data.bot_id||!data.target_id||!data.message) { showToast('Fill all fields','error'); return; }
         const r = await apiPost('/tasks/send-message', data);
-        if (r) { showToast('Message queued!','success'); e.target.reset(); loadLogs(); updateStats(); }
+        if (r) { 
+            showToast('Message queued!','success'); 
+            e.target.reset(); 
+            loadLogs(); 
+            updateStats(); 
+            
+            // Cross Platform Prompt
+            const otherBots = botsCache.filter(b => b.is_active && b.id !== data.bot_id);
+            
+            if (otherBots.length > 0) {
+                const container = document.getElementById('crossSendBotsContainer');
+                container.innerHTML = otherBots.map(b => `
+                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border);">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text); font-size: 0.9rem;">
+                            <input type="checkbox" class="cross-bot-check" value="${b.id}" style="width: 16px; height: 16px; accent-color: var(--blue);" onchange="document.getElementById('cross_target_${b.id}').style.display = this.checked ? 'block' : 'none'">
+                            <strong>${esc(b.name)}</strong> 
+                            <span class="badge badge-${b.platform}" style="font-size:0.65rem;">${capitalize(b.platform)}</span>
+                        </label>
+                        <input type="text" id="cross_target_${b.id}" class="form-control cross-target-input" placeholder="Enter Target ID for this bot..." style="display: none; font-size: 0.8rem; padding: 8px 12px; background: rgba(0,0,0,0.2);">
+                    </div>
+                `).join('');
+                
+                window._lastCrossMessage = data.message;
+                document.getElementById('crossSendModal').style.display = 'flex';
+            }
+        }
     });
 
-    // Schedule Message
-    document.getElementById('scheduleForm')?.addEventListener('submit', async e => {
+    // Cross Send
+    document.getElementById('crossSendForm')?.addEventListener('submit', async e => {
         e.preventDefault();
-        const data = { bot_id: +val('schedBot'), target_id: val('schedTarget'), message: val('schedMessage'), action: 'send_message' };
-        if (!data.bot_id||!data.target_id||!data.message) { showToast('Fill all fields','error'); return; }
-        const r = await apiPost('/tasks/', data);
-        if (r) { showToast('Message scheduled!','success'); e.target.reset(); updateStats(); }
+        
+        const checks = Array.from(document.querySelectorAll('.cross-bot-check')).filter(cb => cb.checked);
+        if (checks.length === 0) {
+            showToast('Please select at least one bot!', 'error');
+            return;
+        }
+
+        // Validate all target IDs before sending any messages to avoid partial failures
+        const tasksQueue = [];
+        for (const cb of checks) {
+            const botId = parseInt(cb.value);
+            const targetId = document.getElementById('cross_target_' + botId).value.trim();
+            if (!targetId) {
+                showToast(`Missing target ID for one of the selected bots!`, 'error');
+                return;
+            }
+            tasksQueue.push({ bot_id: botId, target_id: targetId, message: window._lastCrossMessage });
+        }
+
+        // Send all messages
+        let successCount = 0;
+        for (const data of tasksQueue) {
+            const r = await apiPost('/tasks/send-message', data);
+            if (r) successCount++;
+        }
+        
+        if (successCount > 0) {
+            showToast(`Successfully queued ${successCount} broadcast message(s)!`, 'success');
+            document.getElementById('crossSendModal').style.display = 'none';
+            e.target.reset();
+            loadLogs();
+            updateStats();
+        }
     });
 
     // Auto Reply
