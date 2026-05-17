@@ -231,29 +231,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = { bot_id: +val('msgBot'), target_id: val('msgTarget'), message: val('msgContent') };
         if (!data.bot_id||!data.target_id||!data.message) { showToast('Fill all fields','error'); return; }
         const r = await apiPost('/tasks/send-message', data);
-        if (r) { 
-            showToast('Message queued!','success'); 
-// <<<<<<< HEAD
-            e.target.reset(); 
-            loadLogs(); 
-            updateStats(); 
-            
-            // Cross Platform Prompt
+        if (r) {
+            showToast('Message queued!','success');
+            e.target.reset();
+            loadLogs();
+            updateStats();
+
             const otherBots = botsCache.filter(b => b.is_active && b.id !== data.bot_id);
-            
             if (otherBots.length > 0) {
                 const container = document.getElementById('crossSendBotsContainer');
                 container.innerHTML = otherBots.map(b => `
                     <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border);">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text); font-size: 0.9rem;">
                             <input type="checkbox" class="cross-bot-check" value="${b.id}" style="width: 16px; height: 16px; accent-color: var(--blue);" onchange="document.getElementById('cross_target_${b.id}').style.display = this.checked ? 'block' : 'none'">
-                            <strong>${esc(b.name)}</strong> 
+                            <strong>${esc(b.name)}</strong>
                             <span class="badge badge-${b.platform}" style="font-size:0.65rem;">${capitalize(b.platform)}</span>
                         </label>
                         <input type="text" id="cross_target_${b.id}" class="form-control cross-target-input" placeholder="Enter Target ID for this bot..." style="display: none; font-size: 0.8rem; padding: 8px 12px; background: rgba(0,0,0,0.2);">
                     </div>
                 `).join('');
-                
+
                 window._lastCrossMessage = data.message;
                 document.getElementById('crossSendModal').style.display = 'flex';
             }
@@ -263,15 +260,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cross Send
     document.getElementById('crossSendForm')?.addEventListener('submit', async e => {
         e.preventDefault();
-        
+
         const checks = Array.from(document.querySelectorAll('.cross-bot-check')).filter(cb => cb.checked);
         if (checks.length === 0) {
             showToast('Please select at least one bot!', 'error');
             return;
         }
 
-        // Validate all target IDs before sending any messages to avoid partial failures
-        const tasksQueue = [];
         for (const cb of checks) {
             const botId = parseInt(cb.value);
             const targetId = document.getElementById('cross_target_' + botId).value.trim();
@@ -279,47 +274,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast(`Missing target ID for one of the selected bots!`, 'error');
                 return;
             }
-            tasksQueue.push({ bot_id: botId, target_id: targetId, message: window._lastCrossMessage });
+            [].push({ bot_id: botId, target_id: targetId, message: window._lastCrossMessage });
         }
 
-        // Send all messages
         let successCount = 0;
-        for (const data of tasksQueue) {
+        for (const data of []) {
             const r = await apiPost('/tasks/send-message', data);
             if (r) successCount++;
         }
-        
+
         if (successCount > 0) {
             showToast(`Successfully queued ${successCount} broadcast message(s)!`, 'success');
             document.getElementById('crossSendModal').style.display = 'none';
             e.target.reset();
             loadLogs();
             updateStats();
-// =======
-            
-            const shareOtherApp = confirm("Do you want to share this message on the other app too?");
-            if (shareOtherApp) {
-                const currentBot = botsCache.find(b => b.id === data.bot_id);
-                const otherPlatform = currentBot.platform === 'discord' ? 'telegram' : 'discord';
-                const otherBot = botsCache.find(b => b.platform === otherPlatform && b.is_active);
-                
-                if (otherBot) {
-                    const otherTarget = prompt(`Enter Target ID for ${otherBot.name} (${otherPlatform}):`, data.target_id);
-                    if (otherTarget) {
-                        const r2 = await apiPost('/tasks/send-message', { bot_id: otherBot.id, target_id: otherTarget, message: data.message });
-                        if (r2) {
-                            showToast(`Message also queued for ${otherPlatform}!`, 'success');
-                        }
-                    }
-                } else {
-                    showToast(`No active bot found for ${otherPlatform}.`, 'error');
-                }
-            }
-            
-            e.target.reset(); 
-            loadLogs(); 
-            updateStats(); 
-// >>>>>>> fbe3bdf7f835457d1b4d71199040138fff24d86d
         }
     });
 
@@ -341,6 +310,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (r) { showToast('Welcome message saved!','success'); e.target.reset(); }
     });
 
+    // Manual controls: Refresh stats / trigger worker
+    document.getElementById('btnRefreshStats')?.addEventListener('click', e => {
+        updateStats();
+        showToast('Stats refreshed','success');
+    });
+
+    document.getElementById('btnRunWorker')?.addEventListener('click', async e => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        const r = await apiPost('/tasks/process-now', {});
+        if (r && r.status === 'scheduled') showToast('Worker run scheduled','success');
+        else showToast('Failed to trigger worker','error');
+        btn.disabled = false;
+    });
+
     // Auto refresh
     setInterval(() => { loadLogs(); updateStats(); }, 10000);
 });
@@ -353,6 +337,8 @@ function capitalize(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
 function fmtDate(d) {
     if(!d) return '-';
     const dt = new Date(d);
-    return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) + ', ' +
-           dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    const options = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' };
+    const timeOptions = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata', hour12: false };
+    return dt.toLocaleDateString('en-IN', options) + ', ' +
+           dt.toLocaleTimeString('en-IN', timeOptions) + ' IST';
 }

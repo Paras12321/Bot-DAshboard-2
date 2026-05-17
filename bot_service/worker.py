@@ -172,3 +172,40 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         sys.exit(0)
+
+
+async def process_pending_once() -> dict:
+    """Process pending tasks once (single iteration). Returns a summary dict.
+
+    This is useful for triggering from an API endpoint or a manual action
+    without running the long-lived worker loop.
+    """
+    semaphore = asyncio.Semaphore(WORKER_CONCURRENCY)
+    summary = {"processed": 0, "succeeded": 0, "failed": 0}
+
+    tasks = db_access.get_pending_tasks()
+    if not tasks:
+        return summary
+
+    # create asyncio tasks to process pending tasks concurrently
+    running = [asyncio.create_task(process_task(t, semaphore)) for t in tasks]
+    if running:
+        await asyncio.gather(*running, return_exceptions=True)
+        summary["processed"] = len(running)
+
+    # Count outcomes from DB after processing
+    stats = db_access.get_task_stats()
+    summary["succeeded"] = stats.get("done", 0)
+    summary["failed"] = stats.get("failed", 0)
+    return summary
+
+
+def run_process_pending_once() -> dict:
+    """Synchronous wrapper to run the async one-shot processor.
+
+    Intended to be scheduled via FastAPI BackgroundTasks (calls must be sync).
+    """
+    try:
+        return asyncio.run(process_pending_once())
+    except Exception:
+        return {"processed": 0, "succeeded": 0, "failed": 0}
