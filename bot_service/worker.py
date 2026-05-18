@@ -1,8 +1,23 @@
+"""
+worker.py - Bot Service Worker
+===============================
+Polls the database for pending tasks and dispatches them to the correct
+bot platform (Discord / Telegram) with bounded concurrency.
+
+Usage:
+    python worker.py
+"""
+
 import asyncio
 import logging
 import os
 import sys
 
+# Set stdout to UTF-8 to support emoji printing on Windows
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
+# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from dotenv import load_dotenv
@@ -133,12 +148,12 @@ async def worker_loop(stop_event: asyncio.Event) -> None:
             await asyncio.sleep(POLL_INTERVAL)
 
         except KeyboardInterrupt:
-            print("\n\n Worker stopped by user")
+            print("\n\n🛑 Worker stopped by user")
             db_access.create_log(level="info", message="Bot service worker stopped")
             break
 
         except Exception as e:
-            print(f"\nWorker error: {e}")
+            print(f"\n💥 Worker error: {e}")
             db_access.create_log(level="error", message="Worker loop error", details=str(e))
             await asyncio.sleep(POLL_INTERVAL)
 
@@ -149,7 +164,7 @@ async def main():
     try:
         await worker_loop(stop_event)
     except KeyboardInterrupt:
-        print("\nShutdown complete.")
+        print("\n🛑 Shutdown complete.")
 
 
 if __name__ == "__main__":
