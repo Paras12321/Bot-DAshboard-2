@@ -1,8 +1,3 @@
-"""
-Discord Bot Module — handles sending messages and managing Discord interactions.
-Uses discord.py library.
-"""
-
 import discord
 import asyncio
 import aiohttp
@@ -13,14 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class DiscordBotHandler:
-    """Handles Discord bot operations with connection reuse."""
-
     def __init__(self):
         
         self._clients: dict[str, discord.Client] = {}
 
     async def _get_client(self, token: str) -> discord.Client:
-        """Return a cached, logged-in client for the given token."""
         if token in self._clients:
             client = self._clients[token]
             if not client.is_closed():
@@ -124,17 +116,6 @@ class DiscordBotHandler:
         channel_id: int,
         message: str,
     ) -> dict:
-        """
-        Send a message to a specific Discord channel.
-
-        Args:
-            token: Bot token for authentication
-            channel_id: Target channel ID (integer)
-            message: Message content to send
-
-        Returns:
-            dict with 'status' and 'detail' keys
-        """
         try:
             client = await self._get_client(token)
 
@@ -158,9 +139,6 @@ class DiscordBotHandler:
             return {"status": "failed", "detail": str(e)}
 
     async def validate_token(self, token: str) -> bool:
-        """
-        Validate a Discord bot token via the REST API (lightweight, no WebSocket).
-        """
         url = "https://discord.com/api/v10/users/@me"
         headers = {"Authorization": f"Bot {token}"}
 
@@ -179,6 +157,4 @@ class DiscordBotHandler:
                 await client.close()
         self._clients.clear()
 
-
-# Singleton instance
 discord_handler = DiscordBotHandler()

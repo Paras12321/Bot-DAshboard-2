@@ -1,12 +1,8 @@
 import os
 import sys
-# pyrefly: ignore [missing-import]
 from fastapi import FastAPI
-# pyrefly: ignore [missing-import]
 from fastapi.staticfiles import StaticFiles
-# pyrefly: ignore [missing-import]
 from fastapi.responses import FileResponse
-# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 
 # Add project root to path
@@ -53,7 +49,5 @@ else:
     print(f"Warning: Frontend directory not found at {FRONTEND_DIR}")
 
 if __name__ == "__main__":
-    # pyrefly: ignore [missing-import]
-    import uvicorn
-    # pyrefly: ignore [missing-import]  
+    import uvicorn 
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
