@@ -6,7 +6,7 @@ from backend.database import get_db
 from backend.models.models import Log
 from backend.schemas.schemas import LogResponse
 
-router = APIRouter(prefix="/api/logs", tags=["logs"])
+router = APIRouter(prefix="/api/logs")
 
 @router.get("/", response_model=List[LogResponse])
 def get_logs(limit: int = Query(10, description="Number of logs to return"), db: Session = Depends(get_db)):

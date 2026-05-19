@@ -1,17 +1,14 @@
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 
 class BotCreate(BaseModel):
     name: str
-    platform: str
     token: str
-    role: Optional[str] = "general"
 
 class BotResponse(BotCreate):
     id: int
     is_active: bool
-    created_at: str
 
     class Config:
         orm_mode = True
@@ -21,14 +18,12 @@ class TaskCreate(BaseModel):
     bot_id: int
     target_id: str
     message: str
-    action: Optional[str] = "send_message"
 
 class TaskResponse(TaskCreate):
     id: int
     status: str
     error_message: Optional[str]
     completed_at: Optional[str]
-    created_at: str
 
     class Config:
         orm_mode = True

@@ -1,21 +1,7 @@
-"""
-worker.py - Bot Service Worker
-===============================
-Polls the database for pending tasks and dispatches them to the correct
-bot platform (Discord / Telegram) with bounded concurrency.
-
-Usage:
-    python worker.py
-"""
-
 import asyncio
 import logging
 import os
 import sys
-
-# Set stdout to UTF-8 to support emoji printing on Windows
-if sys.stdout.encoding.lower() != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -24,7 +10,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from dotenv import load_dotenv
 import bot_service.db_access as db_access
 from bot_service.discord_bot import discord_handler
-from bot_service.telegram_bot import telegram_handler
 
 load_dotenv()
 
@@ -43,35 +28,19 @@ WORKER_CONCURRENCY: int = int(os.getenv("WORKER_CONCURRENCY", 5))
 
 
 async def process_task(task, semaphore: asyncio.Semaphore) -> None:
-    """
-    Execute a single task end-to-end under the concurrency semaphore:
-      1. Route to the correct platform handler.
-      2. Mark as done or failed in the database.
-      3. Write an audit log entry.
-    """
     async with semaphore:
         task_id = task["id"]
         bot_id = task["bot_id"]
-        platform = task["platform"]
         token = task["token"]
         target_id = task["target_id"]
         message = task["message"]
-        action = task["action"]
         bot_name = task["bot_name"]
 
-        log.info("Processing task #%s | platform=%s action=%s bot=%s",
-                 task_id, platform, action, bot_name)
+        log.info("Processing task #%s | bot=%s",
+        task_id, bot_name)
 
-        try:
-            if action != "send_message":
-                raise ValueError(f"Unsupported action: {action}")
-
-            if platform == "discord":
-                result = await discord_handler.send_message(token, int(target_id), message)
-            elif platform == "telegram":
-                result = await telegram_handler.send_message(token, target_id, message)
-            else:
-                raise ValueError(f"Unknown platform: {platform}")
+        try:    
+            result = await discord_handler.send_message(token, int(target_id), message)
 
             if result["status"] == "success":
                 db_access.mark_task_done(task_id, status="done")
@@ -79,7 +48,7 @@ async def process_task(task, semaphore: asyncio.Semaphore) -> None:
                     task_id=task_id,
                     bot_id=bot_id,
                     level="info",
-                    message=f"Task #{task_id} succeeded via {platform}",
+                    message=f"Task #{task_id} succeeded",
                     details=result.get("detail", ""),
                 )
                 log.info("Task #%s completed successfully.", task_id)
@@ -90,7 +59,7 @@ async def process_task(task, semaphore: asyncio.Semaphore) -> None:
                     task_id=task_id,
                     bot_id=bot_id,
                     level="error",
-                    message=f"Task #{task_id} failed via {platform}",
+                    message=f"Task #{task_id} failed",
                     details=result.get("detail", ""),
                 )
                 log.warning("Task #%s failed: %s", task_id, result["detail"])
@@ -108,10 +77,6 @@ async def process_task(task, semaphore: asyncio.Semaphore) -> None:
 
 
 async def worker_loop(stop_event: asyncio.Event) -> None:
-    """
-    Main loop — polls the DB for pending tasks and dispatches them
-    concurrently (up to WORKER_CONCURRENCY at once).
-    """
     semaphore = asyncio.Semaphore(WORKER_CONCURRENCY)
 
     log.info("Worker started | poll_interval=%ss concurrency=%s",
@@ -123,7 +88,7 @@ async def worker_loop(stop_event: asyncio.Event) -> None:
     bots = db_access.get_active_bots()
     if bots:
         log.info("Active bots (%d): %s", len(bots),
-                 ", ".join(f"{b['name']} ({b['platform']})" for b in bots))
+                 ", ".join(b['name'] for b in bots))
     else:
         log.warning("No active bots found. Add bots via the dashboard.")
 
@@ -136,6 +101,7 @@ async def worker_loop(stop_event: asyncio.Event) -> None:
             if tasks:
                 log.info("Found %d pending task(s).", len(tasks))
                 for task in tasks:
+                    db_access.mark_task_processing(task["id"])
                     t = asyncio.create_task(
                         process_task(task, semaphore),
                         name=f"task_{task['id']}",
@@ -146,12 +112,12 @@ async def worker_loop(stop_event: asyncio.Event) -> None:
             await asyncio.sleep(POLL_INTERVAL)
 
         except KeyboardInterrupt:
-            print("\n\n🛑 Worker stopped by user")
+            print("\n\nWorker stopped by user")
             db_access.create_log(level="info", message="Bot service worker stopped")
             break
 
         except Exception as e:
-            print(f"\n💥 Worker error: {e}")
+            print(f"\nWorker error: {e}")
             db_access.create_log(level="error", message="Worker loop error", details=str(e))
             await asyncio.sleep(POLL_INTERVAL)
 
@@ -162,7 +128,7 @@ async def main():
     try:
         await worker_loop(stop_event)
     except KeyboardInterrupt:
-        print("\n🛑 Shutdown complete.")
+        print("\nShutdown complete.")
 
 
 if __name__ == "__main__":

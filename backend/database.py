@@ -4,11 +4,11 @@ from sqlalchemy import create_engine
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bot_dashboard.db")
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
+db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bot_dashboard.db")
+sql_database_url = f"sqlite:///{db_path}"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    sql_database_url, connect_args={"check_same_thread": False}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

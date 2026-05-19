@@ -6,7 +6,7 @@ from backend.database import get_db
 from backend.models.models import Bot
 from backend.schemas.schemas import BotCreate, BotResponse
 
-router = APIRouter(prefix="/api/bots", tags=["bots"])
+router = APIRouter(prefix="/api/bots")
 
 @router.get("/", response_model=List[BotResponse])
 def get_bots(db: Session = Depends(get_db)):
@@ -29,11 +29,3 @@ def toggle_bot(bot_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(bot)
     return bot
-
-@router.delete("/{bot_id}", status_code=204)
-def delete_bot(bot_id: int, db: Session = Depends(get_db)):
-    bot = db.query(Bot).filter(Bot.id == bot_id).first()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
-    db.delete(bot)
-    db.commit()

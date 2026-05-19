@@ -1,13 +1,7 @@
-"""
-Discord Bot Module — handles sending messages and managing Discord interactions.
-Uses discord.py library.
-"""
-
 import discord
 import asyncio
 import aiohttp
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +42,7 @@ class DiscordBotHandler:
             try:
 
                 import bot_service.db_access as db_access
-
+            
                 rules = db_access.get_auto_replies()
 
                 for rule in rules:
@@ -74,7 +68,7 @@ class DiscordBotHandler:
                             rule["response_text"]
                         )
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Auto reply error")
         @client.event
         async def on_member_join(member):

@@ -1,8 +1,3 @@
-"""
-Database access helper for the bot service worker.
-Provides direct DB operations without FastAPI dependency injection.
-"""
-
 import sqlite3
 import os
 from contextlib import contextmanager
@@ -30,11 +25,9 @@ def get_connection():
 
 
 def get_pending_tasks():
-    """Fetch all pending tasks joined with their bot details."""
     with get_connection() as conn:
         return conn.execute("""
-            SELECT t.id, t.bot_id, t.target_id, t.message, t.action, t.status, t.error_message, t.created_at, t.completed_at,
-                   b.platform, b.token, b.name AS bot_name
+            SELECT t.id, t.bot_id, t.target_id, t.message, t.status, t.error_message, t.completed_at, b.token, b.name AS bot_name
             FROM tasks t
             JOIN bots b ON t.bot_id = b.id
             WHERE t.status = 'pending' AND b.is_active = 1
@@ -88,3 +81,12 @@ def get_active_bots():
         return conn.execute(
             "SELECT * FROM bots WHERE is_active = 1"
         ).fetchall()
+        
+def mark_task_processing(task_id):
+    with get_connection() as conn:
+        conn.execute("""
+            UPDATE tasks
+            SET status = 'processing'
+            WHERE id = ?
+        """, (task_id,))
+        conn.commit()

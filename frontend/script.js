@@ -1,344 +1,566 @@
-/**
- * Bot Automation Dashboard — Frontend Logic
- */
 const API = '/api';
 
+let botsCache = [];
+
 // ===== TOAST =====
+
 function showToast(message, type = 'info') {
-    const c = document.getElementById('toastContainer'); if (!c) return;
+
+    const c = document.getElementById('toastContainer');
+
+    if (!c) return;
+
     const t = document.createElement('div');
-    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+
     t.className = `toast ${type}`;
-    t.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span class="toast-message">${message}</span><button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
-    c.appendChild(t); setTimeout(() => t.remove(), 4000);
+
+    t.innerHTML = `
+        <span class="toast-message">${message}</span>
+    `;
+
+    c.appendChild(t);
+
+    setTimeout(() => {
+        t.remove();
+    }, 4000);
 }
 
 // ===== API HELPERS =====
-async function apiGet(ep) {
-    try { const r = await fetch(API+ep); if(!r.ok) throw new Error(`HTTP ${r.status}`); return await r.json(); }
-    catch(e) { console.error('GET '+ep, e); return null; }
-}
-async function apiPost(ep, data) {
+
+async function apiGet(endpoint) {
+
     try {
-        const r = await fetch(API+ep, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-        const j = await r.json(); if(!r.ok) throw new Error(j.detail||`HTTP ${r.status}`); return j;
-    } catch(e) { showToast('Error: '+e.message,'error'); return null; }
-}
-async function apiDelete(ep) {
-    try { const r = await fetch(API+ep,{method:'DELETE'}); return r.ok || r.status===204; }
-    catch(e) { showToast('Delete failed','error'); return false; }
-}
-async function apiPatch(ep) {
-    try { const r = await fetch(API+ep,{method:'PATCH'}); if(!r.ok) throw new Error(); return await r.json(); }
-    catch(e) { return null; }
-}
 
-// ===== SIDEBAR NAVIGATION =====
-function showSection(section) {
-    // Update active link
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-    const link = document.querySelector(`.sidebar-link[data-section="${section}"]`);
-    if (link) link.classList.add('active');
+        const response = await fetch(API + endpoint);
 
-    // Show/hide sections
-    const allSections = ['addbot','sendmsg','autoreply','welcome','logs','botlist','profile'];
-    const dashSections = ['addbot','sendmsg','autoreply','welcome','logs'];
-
-    if (section === 'dashboard') {
-        // Show main dashboard panels
-        document.getElementById('statsRow').style.display = '';
-        dashSections.forEach(s => { const el = document.getElementById('sec-'+s); if(el) el.closest('.panel-row') ? el.closest('.panel-row').style.display='' : el.style.display=''; });
-        document.querySelectorAll('.panel-row').forEach(r => r.style.display = '');
-        document.getElementById('sec-botlist').style.display = 'none';
-        document.getElementById('sec-profile').style.display = 'none';
-    } else {
-        document.getElementById('statsRow').style.display = 'none';
-        document.querySelectorAll('.panel-row').forEach(r => r.style.display = 'none');
-        document.getElementById('sec-botlist').style.display = 'none';
-        document.getElementById('sec-profile').style.display = 'none';
-
-        if (section === 'addbot') {
-            // Show add bot + bot list
-            showPanelRow('sec-addbot');
-            document.getElementById('sec-botlist').style.display = '';
-        } else if (section === 'profile') {
-            document.getElementById('sec-profile').style.display = '';
-        } else {
-            showPanelRow('sec-'+section);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+
+        return await response.json();
+
+    } catch (e) {
+
+        console.error(e);
+
+        showToast('Failed to fetch data', 'error');
+
+        return null;
     }
-    // Close mobile sidebar
-    document.getElementById('sidebar')?.classList.remove('open');
 }
 
-function showPanelRow(panelId) {
-    const panel = document.getElementById(panelId);
-    if (panel) {
-        const row = panel.closest('.panel-row');
-        if (row) row.style.display = '';
-        else panel.style.display = '';
+async function apiPost(endpoint, data) {
+
+    try {
+
+        const response = await fetch(API + endpoint, {
+
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify(data)
+        });
+
+        const json = await response.json();
+
+        if (!response.ok) {
+            throw new Error(json.detail || `HTTP ${response.status}`);
+        }
+
+        return json;
+
+    } catch (e) {
+
+        console.error(e);
+
+        showToast(e.message, 'error');
+
+        return null;
     }
 }
 
-function toggleSidebar() {
-    document.getElementById('sidebar')?.classList.toggle('open');
+async function apiDelete(endpoint) {
+
+    try {
+
+        const response = await fetch(API + endpoint, {
+            method: 'DELETE'
+        });
+
+        return response.ok || response.status === 204;
+
+    } catch {
+
+        showToast('Delete failed', 'error');
+
+        return false;
+    }
+}
+
+// ===== UTILS =====
+
+function val(id) {
+
+    const el = document.getElementById(id);
+
+    return el ? el.value.trim() : '';
+}
+
+function setText(id, value) {
+
+    const el = document.getElementById(id);
+
+    if (el) {
+        el.textContent = value;
+    }
+}
+
+function esc(text) {
+
+    if (!text) return '';
+
+    const div = document.createElement('div');
+
+    div.textContent = text;
+
+    return div.innerHTML;
+}
+
+function fmtDate(date) {
+
+    if (!date) return '-';
+
+    return new Date(date).toLocaleString();
+}
+
+function capitalize(text) {
+
+    return text
+        ? text.charAt(0).toUpperCase() + text.slice(1)
+        : '';
 }
 
 function toggleTokenVis() {
+
     const input = document.getElementById('botToken');
-    input.type = input.type === 'password' ? 'text' : 'password';
+
+    input.type =
+        input.type === 'password'
+            ? 'text'
+            : 'password';
 }
 
-// ===== BOTS =====
-let botsCache = [];
+// ===== LOAD BOTS =====
 
 async function loadBots() {
+
     const bots = await apiGet('/bots/');
+
     if (!bots) return;
+
     botsCache = bots;
-    renderBotTable(bots);
-    populateBotSelects(bots);
+
+    populateBotSelects();
+
     updateStats();
-    // System status
-    const dc = bots.filter(b => b.platform==='discord').length;
-    const tg = bots.filter(b => b.platform==='telegram').length;
-    setText('sysDiscord', dc);
-    setText('sysTelegram', tg);
 }
 
-function renderBotTable(bots) {
-    const tbody = document.getElementById('botTableBody'); if (!tbody) return;
-    if (!bots.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No bots registered yet</td></tr>'; return; }
-    tbody.innerHTML = bots.map(b => `<tr>
-        <td><strong>${esc(b.name)}</strong></td>
-        <td><span class="badge badge-${b.platform}">${b.platform==='discord'?'🎮':'✈️'} ${b.platform}</span></td>
-        <td>${esc(b.role)}</td>
-        <td><span class="badge ${b.is_active?'badge-active':'badge-inactive'}">${b.is_active?'● Active':'○ Inactive'}</span></td>
-        <td>${fmtDate(b.created_at)}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="toggleBot(${b.id})">${b.is_active?'Pause':'Start'}</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteBot(${b.id})">Delete</button></td>
-    </tr>`).join('');
-}
+function populateBotSelects() {
 
-function populateBotSelects(bots) {
-    const active = bots.filter(b => b.is_active);
-    ['msgBot','arBot'].forEach(id => {
-        const el = document.getElementById(id); if(!el) return;
-        el.innerHTML = '<option value="">Select bot</option>' + active.map(b => `<option value="${b.id}">${b.name} (${b.platform})</option>`).join('');
+    const activeBots =
+        botsCache.filter(bot => bot.is_active);
+
+    ['msgBot', 'arBot', 'welBot'].forEach(id => {
+
+        const el = document.getElementById(id);
+
+        if (!el) return;
+
+        el.innerHTML =
+            '<option value="">Select Discord Bot</option>' +
+
+            activeBots.map(bot => `
+                <option value="${bot.id}">
+                    ${bot.name}
+                </option>
+            `).join('');
     });
-    // Welcome only shows discord bots
-    const welEl = document.getElementById('welBot');
-    if (welEl) {
-        const discordBots = active.filter(b => b.platform === 'discord');
-        welEl.innerHTML = '<option value="">Select Discord bot</option>' + discordBots.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-    }
 }
-
-async function toggleBot(id) {
-    const r = await apiPatch(`/bots/${id}/toggle`);
-    if (r) { showToast(`Bot ${r.is_active?'activated':'paused'}`, 'success'); loadBots(); }
-}
-async function deleteBot(id) {
-    if (!confirm('Delete this bot and all its data?')) return;
-    if (await apiDelete(`/bots/${id}`)) { showToast('Bot deleted','success'); loadBots(); }
-}
-
-// ===== TASKS =====
-async function loadTasks() { updateStats(); }
 
 // ===== LOGS =====
+
 async function loadLogs() {
+
     const logs = await apiGet('/logs/?limit=10');
+
     if (!logs) return;
-    const tbody = document.getElementById('logTableBody'); if (!tbody) return;
-    if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No logs yet</td></tr>'; return; }
+
+    const tbody =
+        document.getElementById('logTableBody');
+
+    if (!tbody) return;
+
+    if (!logs.length) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty-cell">
+                    No logs yet
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
     tbody.innerHTML = logs.map(log => {
-        const bot = botsCache.find(b => b.id === log.bot_id);
-        const platform = bot ? bot.platform : 'unknown';
-        const statusClass = log.level === 'success' ? 'badge-success' : log.level === 'error' ? 'badge-failed' : 'badge-pending';
-        return `<tr>
-            <td>${fmtDate(log.timestamp)}</td>
-            <td><span class="platform-icon ${platform}">${platform==='discord'?'D':'T'}</span></td>
-            <td>${bot ? esc(bot.name) : 'Bot #'+(log.bot_id||'-')}</td>
-            <td>${esc(log.message).substring(0,40)}</td>
-            <td><span class="badge ${statusClass}">${capitalize(log.level)}</span></td>
-        </tr>`;
+
+        const bot =
+            botsCache.find(b => b.id === log.bot_id);
+
+        return `
+            <tr>
+
+                <td>
+                    ${fmtDate(log.timestamp)}
+                </td>
+
+                <td>
+                    ${bot ? esc(bot.name) : '-'}
+                </td>
+
+                <td>
+                    ${esc(log.message).substring(0, 50)}
+                </td>
+
+                <td>
+                    ${capitalize(log.level)}
+                </td>
+
+            </tr>
+        `;
+
     }).join('');
 }
 
-// ===== AUTO REPLY =====
+// ===== AUTO REPLIES =====
+
 async function loadAutoReplies() {
-    const rules = await apiGet('/auto-reply/');
+
+    const rules =
+        await apiGet('/auto-reply/');
+
     if (!rules) return;
-    const container = document.getElementById('autoReplyList'); if (!container) return;
-    if (!rules.length) { container.innerHTML = ''; return; }
-    container.innerHTML = rules.map(r => {
-        const bot = botsCache.find(b => b.id === r.bot_id);
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:6px;font-size:.82rem;">
-            <div><strong>"${esc(r.trigger_keyword)}"</strong> → ${esc(r.response_text.substring(0,35))}
-            <div style="font-size:.72rem;color:var(--text-muted);">${bot?bot.name:'Bot #'+r.bot_id}</div></div>
-            <button class="btn btn-danger btn-sm" onclick="delAutoReply(${r.id})">×</button>
-        </div>`;
+
+    const container =
+        document.getElementById('autoReplyList');
+
+    if (!container) return;
+
+    if (!rules.length) {
+
+        container.innerHTML = '';
+
+        setText('statAutoReply', 0);
+
+        return;
+    }
+
+    container.innerHTML = rules.map(rule => {
+
+        const bot =
+            botsCache.find(b => b.id === rule.bot_id);
+
+        return `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:10px;
+                background:rgba(255,255,255,.03);
+                border-radius:8px;
+                margin-bottom:8px;
+            ">
+
+                <div>
+
+                    <strong>
+                        "${esc(rule.trigger_keyword)}"
+                    </strong>
+
+                    → ${esc(rule.response_text)}
+
+                    <div style="
+                        font-size:.72rem;
+                        color:var(--text-muted);
+                        margin-top:4px;
+                    ">
+                        ${bot ? bot.name : ''}
+                    </div>
+
+                </div>
+
+                <button
+                    class="btn btn-danger btn-sm"
+                    onclick="deleteAutoReply(${rule.id})"
+                >
+                    ×
+                </button>
+
+            </div>
+        `;
+
     }).join('');
+
     setText('statAutoReply', rules.length);
 }
-async function delAutoReply(id) {
-    if (await apiDelete(`/auto-reply/${id}`)) { showToast('Rule deleted','success'); loadAutoReplies(); }
+
+async function deleteAutoReply(id) {
+
+    const ok =
+        await apiDelete(`/auto-reply/${id}`);
+
+    if (ok) {
+
+        showToast('Rule deleted', 'success');
+
+        loadAutoReplies();
+    }
 }
 
 // ===== STATS =====
-async function updateStats() {
-    const stats = await apiGet('/tasks/stats');
-    if (stats) {
-        animateNum('statMessages', stats.done);
-        setText('statMsgSub', `+${stats.done} total`);
-        setText('sysPending', stats.pending);
-    }
-    const totalBots = botsCache.length;
-    const dc = botsCache.filter(b => b.platform==='discord').length;
-    const tg = botsCache.filter(b => b.platform==='telegram').length;
-    animateNum('statBots', totalBots);
-    setText('statBotsSub', `${dc} Discord \u2022 ${tg} Telegram`);
-}
 
-function animateNum(id, target) {
-    const el = document.getElementById(id); if (!el) return;
-    const start = parseInt(el.textContent)||0, dur = 500, t0 = performance.now();
-    function tick(now) {
-        const p = Math.min((now-t0)/dur,1), e = 1-Math.pow(1-p,3);
-        el.textContent = Math.round(start+(target-start)*e);
-        if (p<1) requestAnimationFrame(tick);
+async function updateStats() {
+
+    const stats =
+        await apiGet('/tasks/stats');
+
+    if (stats) {
+
+        setText('statMessages', stats.done);
+
+        setText(
+            'statMsgSub',
+            `${stats.done} Sent`
+        );
     }
-    requestAnimationFrame(tick);
+
+    const totalBots = botsCache.length;
+
+    setText('statBots', totalBots);
+
+    setText(
+        'statBotsSub',
+        `${totalBots} Active Bots`
+    );
 }
 
 // ===== INIT =====
+
 document.addEventListener('DOMContentLoaded', () => {
-    loadBots(); loadLogs(); loadAutoReplies();
 
-    // Add Bot
-    document.getElementById('addBotForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = { name: val('botName'), platform: val('botPlatform'), token: val('botToken'), role: 'general' };
-        if (!data.name||!data.platform||!data.token) { showToast('Fill all fields','error'); return; }
-        const r = await apiPost('/bots/', data);
-        if (r) { showToast(r.name+' registered!','success'); e.target.reset(); loadBots(); }
-    });
+    loadBots();
 
-    // Send Message
-    document.getElementById('sendMessageForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = { bot_id: +val('msgBot'), target_id: val('msgTarget'), message: val('msgContent') };
-        if (!data.bot_id||!data.target_id||!data.message) { showToast('Fill all fields','error'); return; }
-        const r = await apiPost('/tasks/send-message', data);
-        if (r) {
-            showToast('Message queued!','success');
-            e.target.reset();
-            loadLogs();
-            updateStats();
+    loadLogs();
 
-            const otherBots = botsCache.filter(b => b.is_active && b.id !== data.bot_id);
-            if (otherBots.length > 0) {
-                const container = document.getElementById('crossSendBotsContainer');
-                container.innerHTML = otherBots.map(b => `
-                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border);">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text); font-size: 0.9rem;">
-                            <input type="checkbox" class="cross-bot-check" value="${b.id}" style="width: 16px; height: 16px; accent-color: var(--blue);" onchange="document.getElementById('cross_target_${b.id}').style.display = this.checked ? 'block' : 'none'">
-                            <strong>${esc(b.name)}</strong>
-                            <span class="badge badge-${b.platform}" style="font-size:0.65rem;">${capitalize(b.platform)}</span>
-                        </label>
-                        <input type="text" id="cross_target_${b.id}" class="form-control cross-target-input" placeholder="Enter Target ID for this bot..." style="display: none; font-size: 0.8rem; padding: 8px 12px; background: rgba(0,0,0,0.2);">
-                    </div>
-                `).join('');
+    loadAutoReplies();
 
-                window._lastCrossMessage = data.message;
-                document.getElementById('crossSendModal').style.display = 'flex';
-            }
-        }
-    });
+    // ===== ADD BOT =====
 
-    // Cross Send
-    document.getElementById('crossSendForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
+    document.getElementById('addBotForm')
+        ?.addEventListener('submit', async e => {
 
-        const checks = Array.from(document.querySelectorAll('.cross-bot-check')).filter(cb => cb.checked);
-        if (checks.length === 0) {
-            showToast('Please select at least one bot!', 'error');
-            return;
-        }
+            e.preventDefault();
 
-        for (const cb of checks) {
-            const botId = parseInt(cb.value);
-            const targetId = document.getElementById('cross_target_' + botId).value.trim();
-            if (!targetId) {
-                showToast(`Missing target ID for one of the selected bots!`, 'error');
+            const data = {
+
+                name: val('botName'),
+
+                token: val('botToken')
+            };
+
+            if (
+                !data.name ||
+                !data.token
+            ) {
+
+                showToast(
+                    'Fill all fields',
+                    'error'
+                );
+
                 return;
             }
-            [].push({ bot_id: botId, target_id: targetId, message: window._lastCrossMessage });
-        }
 
-        let successCount = 0;
-        for (const data of []) {
-            const r = await apiPost('/tasks/send-message', data);
-            if (r) successCount++;
-        }
+            const response =
+                await apiPost('/bots/', data);
 
-        if (successCount > 0) {
-            showToast(`Successfully queued ${successCount} broadcast message(s)!`, 'success');
-            document.getElementById('crossSendModal').style.display = 'none';
-            e.target.reset();
-            loadLogs();
-            updateStats();
-        }
-    });
+            if (response) {
 
-    // Auto Reply
-    document.getElementById('autoReplyForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = { bot_id: +val('arBot'), trigger_keyword: val('arKeyword'), response_text: val('arResponse'), match_type: 'contains' };
-        if (!data.bot_id||!data.trigger_keyword||!data.response_text) { showToast('Fill all fields','error'); return; }
-        const r = await apiPost('/auto-reply/', data);
-        if (r) { showToast('Rule added!','success'); e.target.reset(); loadAutoReplies(); }
-    });
+                showToast(
+                    'Bot added!',
+                    'success'
+                );
 
-    // Welcome Message
-    document.getElementById('welcomeForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = { bot_id: +val('welBot'), channel_id: val('welChannel'), message_template: val('welMessage') };
-        if (!data.bot_id||!data.message_template) { showToast('Fill all fields','error'); return; }
-        const r = await apiPost('/welcome/', data);
-        if (r) { showToast('Welcome message saved!','success'); e.target.reset(); }
-    });
+                e.target.reset();
 
-    // Manual controls: Refresh stats / trigger worker
-    document.getElementById('btnRefreshStats')?.addEventListener('click', e => {
+                loadBots();
+            }
+        });
+
+    // ===== SEND MESSAGE =====
+
+    document.getElementById('sendMessageForm')
+        ?.addEventListener('submit', async e => {
+
+            e.preventDefault();
+
+            const data = {
+
+                bot_id: +val('msgBot'),
+
+                target_id: val('msgTarget'),
+
+                message: val('msgContent')
+            };
+
+            if (
+                !data.bot_id ||
+                !data.target_id ||
+                !data.message
+            ) {
+
+                showToast(
+                    'Fill all fields',
+                    'error'
+                );
+
+                return;
+            }
+
+            const response =
+                await apiPost(
+                    '/tasks/send-message',
+                    data
+                );
+
+            if (response) {
+
+                showToast(
+                    'Message queued!',
+                    'success'
+                );
+
+                e.target.reset();
+
+                loadLogs();
+
+                updateStats();
+            }
+        });
+
+    // ===== AUTO REPLY =====
+
+    document.getElementById('autoReplyForm')
+        ?.addEventListener('submit', async e => {
+
+            e.preventDefault();
+
+            const data = {
+
+                bot_id: +val('arBot'),
+
+                trigger_keyword: val('arKeyword'),
+
+                response_text: val('arResponse'),
+
+                match_type: 'contains'
+            };
+
+            if (
+                !data.bot_id ||
+                !data.trigger_keyword ||
+                !data.response_text
+            ) {
+
+                showToast(
+                    'Fill all fields',
+                    'error'
+                );
+
+                return;
+            }
+
+            const response =
+                await apiPost('/auto-reply/', data);
+
+            if (response) {
+
+                showToast(
+                    'Rule added!',
+                    'success'
+                );
+
+                e.target.reset();
+
+                loadAutoReplies();
+            }
+        });
+
+    // ===== WELCOME =====
+
+    document.getElementById('welcomeForm')
+        ?.addEventListener('submit', async e => {
+
+            e.preventDefault();
+
+            const data = {
+
+                bot_id: +val('welBot'),
+
+                channel_id: val('welChannel'),
+
+                message_template: val('welMessage')
+            };
+
+            if (
+                !data.bot_id ||
+                !data.channel_id ||
+                !data.message_template
+            ) {
+
+                showToast(
+                    'Fill all fields',
+                    'error'
+                );
+
+                return;
+            }
+
+            const response =
+                await apiPost('/welcome/', data);
+
+            if (response) {
+
+                showToast(
+                    'Welcome message saved!',
+                    'success'
+                );
+
+                e.target.reset();
+            }
+        });
+
+    // ===== AUTO REFRESH =====
+
+    setInterval(() => {
+
+        loadLogs();
+
         updateStats();
-        showToast('Stats refreshed','success');
-    });
 
-    document.getElementById('btnRunWorker')?.addEventListener('click', async e => {
-        const btn = e.currentTarget;
-        btn.disabled = true;
-        const r = await apiPost('/tasks/process-now', {});
-        if (r && r.status === 'scheduled') showToast('Worker run scheduled','success');
-        else showToast('Failed to trigger worker','error');
-        btn.disabled = false;
-    });
-
-    // Auto refresh
-    setInterval(() => { loadLogs(); updateStats(); }, 10000);
+    }, 10000);
 });
-
-// ===== UTILS =====
-function val(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
-function setText(id,v) { const el=document.getElementById(id); if(el) el.textContent=v; }
-function esc(s) { if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-function capitalize(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
-function fmtDate(d) {
-    if(!d) return '-';
-    const dt = new Date(d);
-    const options = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' };
-    const timeOptions = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata', hour12: false };
-    return dt.toLocaleDateString('en-IN', options) + ', ' +
-           dt.toLocaleTimeString('en-IN', timeOptions) + ' IST';
-}
