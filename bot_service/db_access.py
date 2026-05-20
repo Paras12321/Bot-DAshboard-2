@@ -12,7 +12,6 @@ DB_PATH = os.getenv(
 
 @contextmanager
 def get_connection():
-    """Context manager for safe SQLite connections."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
@@ -36,7 +35,6 @@ def get_pending_tasks():
 
 
 def mark_task_done(task_id, status="done", error_message=None):
-    """Update a task's status after execution."""
     with get_connection() as conn:
         conn.execute("""
             UPDATE tasks
@@ -47,7 +45,6 @@ def mark_task_done(task_id, status="done", error_message=None):
 
 
 def create_log(task_id=None, bot_id=None, level="info", message="", details=None):
-    """Insert a log entry into the database."""
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO logs (task_id, bot_id, level, message, details, timestamp)
@@ -58,7 +55,6 @@ def create_log(task_id=None, bot_id=None, level="info", message="", details=None
 
 
 def get_auto_replies():
-    """Get all active auto-reply rules for a specific bot."""
     with get_connection() as conn:
         return conn.execute("""
     SELECT * FROM auto_replies
@@ -67,7 +63,6 @@ def get_auto_replies():
 
 
 def get_welcome_messages():
-    """Get all active welcome messages for a specific bot."""
     with get_connection() as conn:
         return conn.execute("""
             SELECT * FROM welcome_messages
@@ -76,7 +71,6 @@ def get_welcome_messages():
 
 
 def get_active_bots():
-    """Get all active bots."""
     with get_connection() as conn:
         return conn.execute(
             "SELECT * FROM bots WHERE is_active = 1"

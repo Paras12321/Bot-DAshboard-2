@@ -24,9 +24,6 @@ log = logging.getLogger("worker")
 POLL_INTERVAL: int = int(os.getenv("POLL_INTERVAL", 5))
 WORKER_CONCURRENCY: int = int(os.getenv("WORKER_CONCURRENCY", 5))
 
-
-
-
 async def process_task(task, semaphore: asyncio.Semaphore) -> None:
     async with semaphore:
         task_id = task["id"]

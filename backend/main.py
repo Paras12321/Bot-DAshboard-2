@@ -20,7 +20,6 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Multi-Platform Bot Dashboard API")
 
-# Enable CORS (if needed)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

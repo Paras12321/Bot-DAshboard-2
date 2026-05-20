@@ -8,9 +8,8 @@ from backend.database import get_db
 from backend.models.models import AutoReply, WelcomeMessage, Bot
 from backend.schemas.schemas import AutoReplyCreate, AutoReplyResponse, WelcomeMessageCreate, WelcomeMessageResponse
 
-# Create two routers since the frontend has different prefixes
-auto_reply_router = APIRouter(prefix="/api/auto-reply", tags=["auto_reply"])
-welcome_router = APIRouter(prefix="/api/welcome", tags=["welcome"])
+auto_reply_router = APIRouter(prefix="/api/auto-reply")
+welcome_router = APIRouter(prefix="/api/welcome")
 
 @auto_reply_router.get("/", response_model=List[AutoReplyResponse])
 def get_auto_replies(db: Session = Depends(get_db)):

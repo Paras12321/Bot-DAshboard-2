@@ -17,7 +17,7 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bot_id = Column(Integer, ForeignKey("bots.id"))
-    status = Column(String, default="pending", index=True) # pending, done, failed
+    status = Column(String, default="pending", index=True)
     target_id = Column(String)
     message = Column(String)
     error_message = Column(String, nullable=True)
