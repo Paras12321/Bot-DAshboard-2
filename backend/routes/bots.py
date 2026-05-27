@@ -1,14 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
-
 from backend.database import get_db
 from backend.models.models import Bot
 from backend.schemas.schemas import BotCreate, BotResponse
 
 router = APIRouter(prefix="/api/bots")
 
-@router.get("/", response_model=List[BotResponse])
+@router.get("/", response_model=list[BotResponse])
 def get_bots(db: Session = Depends(get_db)):
     return db.query(Bot).all()
 
@@ -19,13 +17,3 @@ def create_bot(bot: BotCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_bot)
     return db_bot
-
-@router.patch("/{bot_id}/toggle", response_model=BotResponse)
-def toggle_bot(bot_id: int, db: Session = Depends(get_db)):
-    bot = db.query(Bot).filter(Bot.id == bot_id).first()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
-    bot.is_active = not bot.is_active
-    db.commit()
-    db.refresh(bot)
-    return bot

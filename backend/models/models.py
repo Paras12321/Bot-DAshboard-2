@@ -1,6 +1,4 @@
-# pyrefly: ignore [missing-import]
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
-# pyrefly: ignore [missing-import]
 from datetime import datetime
 from backend.database import Base
 
@@ -41,7 +39,6 @@ class AutoReply(Base):
     bot_id = Column(Integer, ForeignKey("bots.id"))
     trigger_keyword = Column(String)
     response_text = Column(String)
-    match_type = Column(String, default="contains")
     is_active = Column(Boolean, default=True)
 
 class WelcomeMessage(Base):
@@ -50,5 +47,4 @@ class WelcomeMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     bot_id = Column(Integer, ForeignKey("bots.id"))
     channel_id = Column(String, default="general")
-    message_template = Column(String)
     is_active = Column(Boolean, default=True)

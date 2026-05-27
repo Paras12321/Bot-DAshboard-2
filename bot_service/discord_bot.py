@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class DiscordBotHandler:
     def __init__(self):
         
@@ -37,9 +36,7 @@ class DiscordBotHandler:
                 return
 
             try:
-
                 import bot_service.db_access as db_access
-            
                 rules = db_access.get_auto_replies()
 
                 for rule in rules:
@@ -48,22 +45,16 @@ class DiscordBotHandler:
                         continue
 
                     trigger = rule["trigger_keyword"].lower()
-
                     content = message.content.lower()
 
                     matched = False
 
                     if rule["match_type"] == "exact":
                         matched = content == trigger
-
                     elif rule["match_type"] == "contains":
                         matched = trigger in content
-
                     if matched:
-
-                        await message.channel.send(
-                            rule["response_text"]
-                        )
+                        await message.channel.send(rule["response_text"])
 
             except Exception:
                 logger.exception("Auto reply error")
@@ -71,31 +62,20 @@ class DiscordBotHandler:
         async def on_member_join(member):
 
             try:
-
                 import bot_service.db_access as db_access
-
                 rules = db_access.get_welcome_messages()
 
                 for rule in rules:
 
                     if not rule["is_active"]:
                         continue
-
-                    channel = member.guild.get_channel(
-                    int(rule["channel_id"])
-                    )
-
+                    channel = member.guild.get_channel(int(rule["channel_id"]))
                     if not channel:
                         continue
-
-                    msg = rule["message_template"].replace(
-                        "{user}",
-                        member.name
-                    )
+                    msg = rule["message_template"].replace("{user}",member.name)
 
                     await channel.send(msg)
-
-            except Exception as e:
+            except Exception:
                 logger.exception("Welcome message error")
        
         asyncio.create_task(client.start(token))
@@ -119,15 +99,6 @@ class DiscordBotHandler:
             logger.info("Message sent to Discord channel #%s", channel.name)
             return {"status": "success", "detail": f"Message sent to channel {channel_id}"}
 
-        except discord.LoginFailure:
-            logger.error("Invalid Discord bot token")
-            return {"status": "failed", "detail": "Invalid bot token"}
-        except discord.NotFound:
-            logger.error("Discord channel %s not found", channel_id)
-            return {"status": "failed", "detail": f"Channel {channel_id} not found"}
-        except discord.Forbidden:
-            logger.error("Bot lacks permission to send to channel %s", channel_id)
-            return {"status": "failed", "detail": "Bot lacks permission to send messages"}
         except Exception as e:
             logger.exception("Unexpected error sending Discord message")
             return {"status": "failed", "detail": str(e)}

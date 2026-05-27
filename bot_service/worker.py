@@ -120,7 +120,7 @@ async def worker_loop(stop_event: asyncio.Event) -> None:
 
 
 async def main():
-    """Entry point for the worker."""
+    
     stop_event = asyncio.Event()
     try:
         await worker_loop(stop_event)

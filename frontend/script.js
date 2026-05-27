@@ -331,7 +331,7 @@ async function deleteAutoReply(id) {
     }
 }
 
-// ===== STATS =====
+
 
 async function updateStats() {
 
@@ -358,7 +358,7 @@ async function updateStats() {
     );
 }
 
-// ===== INIT =====
+
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-    // ===== SEND MESSAGE =====
+
 
     document.getElementById('sendMessageForm')
         ?.addEventListener('submit', async e => {
@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-    // ===== AUTO REPLY =====
+
 
     document.getElementById('autoReplyForm')
         ?.addEventListener('submit', async e => {
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-    // ===== WELCOME =====
+
 
     document.getElementById('welcomeForm')
         ?.addEventListener('submit', async e => {
@@ -553,8 +553,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.target.reset();
             }
         });
-
-    // ===== AUTO REFRESH =====
 
     setInterval(() => {
 
